@@ -12,9 +12,9 @@ I've written a few different implementations, and have concluded on what I want 
 + clear definition of business logic
 + able to combine multiple calls and return a combined JSON (example when calling a list, and getting total count/pagination)
 
+I apologize if I did not make my point clear enough. 
 
-
-// Todo, create a better way to visualize them
+TODO: Find a better way to explain this concept.
 Here's the usual way of writing an Express routes:
 
 For each API calls...
@@ -75,6 +75,7 @@ module.exports = [ GetFollowers ]
 // Note that at this point the data is not returned to the users that calls the API route yet.
 
 // entity, store and graph are just pure functions written in the same file
+// welcome promises :)
 const Services = (req, res) => {
 	const json =  Promise.resolve(entity(req, res)) // 1
 	.then(store) // 2
@@ -117,6 +118,35 @@ Api.getFollowers = (req, res) => {
 	.then(RestHelper.success(req, res)) // a helper to return the json and the correct status code
 	.catch(RestHelper.error(req, res)); // a helper to return the error and the error description
 }
+// Scenario: What if you need to call multiple services?
+Api.getFollowersWithCount = (req, res) => {
+
+	Promise.all([
+		getFollowersService(req, res),
+		getFollowersCountService(req, res)
+	]).then((data) => {
+		// destructure
+		const [ followers, count ] = data;
+		// do something...parse/modify response
+		return response;
+	})
+	.then(RestHelper.success(req, res)) // a helper to return the json and the correct status code
+	.catch(RestHelper.error(req, res)); // a helper to return the error and the error description
+}
+// Scenario: What if you need to call other services (Notifications etc)?
+Api.getFollowersWithCount = (req, res) => {
+
+	
+	sendFollowRequest(req, res)
+	.then(RestHelper.success(req, res)) // a helper to return the json and the correct status code
+	.catch(RestHelper.error(req, res)) // a helper to return the error and the error description
+	.then(() => {
+		// always called in a promise
+		// import notification service and call them
+		notificationService();
+	})
+}
+
 // Curry this so that you can pass other dependency if you need to (socket, passport)
 module.exports = function follows(param) {
 	return Api;
