@@ -1,18 +1,24 @@
 # NodeJS + ES6
 
-### Structuring a REST api with NodeJS and ExpressJS in ES6.
+### Code structure for REST API with NodeJS + Express, written in ES6
 
-The goal is to achieve the following:
-+ consistent code
-+ predictable flow
-+ simple
+I've written a few different implementations, and have concluded on what I want to achieve:
++ avoid library or framework - focus more on the architecture design
++ consistent way of writing codes, avoid redundancy
++ clean codes, something that others can read and understand immediately
++ predictable flow, from the input to output
++ separation of concerns - avoid deep integration of database query in routes etc
++ centralized model parser
++ clear definition of business logic
++ able to combine multiple calls and return a combined JSON (example when calling a list, and getting total count/pagination)
+
+
 
 // Todo, create a better way to visualize them
-The old way of writing:
+Here's the usual way of writing an Express routes:
 
 For each API calls...
 ```javascript
-// Old way of writing
 // /api/followers.js
 var Follower = require('../models/follower');
 app.get('/v1/followers', function (req, res) {
@@ -20,7 +26,7 @@ app.get('/v1/followers', function (req, res) {
   var request = {
     id: req.params.id
   }
-  
+  // callback style
   Follower.find(request, function (err, results) {
     // if (err) { handle error }
     // else handle results
@@ -32,10 +38,11 @@ app.get('/v1/followers', function (req, res) {
 });
 ```
 
-However, this will get pretty repetitive soon. You will writing app.get('...') all the time.
-The workaround is to loop through the routes.
+The problem with this is:
++ repetitive, you will end up writing app.get('...')/app.post(...) over and over again.
++ callback hell, calling another service means you have to nest the callback together
 
-The new way of writing: 
+I've resolved to this way of writing my code: 
 ```javascript
 // /api/followers/actions.js
 // Actions holds the endpoint of the REST uri and at the same time tells us what to do 
@@ -43,6 +50,8 @@ The new way of writing:
 
 // Honestly, I prefer writing the request URL this way then using Express Router()
 const GET_FOLLOWERS = '/api/v1/followers';
+// Example for getting a follower
+// const GET_FOLLOWER = '/api/v1/followers/:id';
 
 const GetFollowers = {
   method: 'get',
@@ -67,12 +76,31 @@ module.exports = [ GetFollowers ]
 
 // entity, store and graph are just pure functions written in the same file
 const Services = (req, res) => {
-const json =  Promise.resolve(entity(req, res)) // 1
-.then(store) // 2
-.then(graph) // 3
-
-return json;// 4
+	const json =  Promise.resolve(entity(req, res)) // 1
+	.then(store) // 2
+	.then(graph) // 3
+	
+	return json;// 4
 }
+// 1
+const entity = (req, res) => {
+	return {
+		_id: req.params.id
+	}
+}
+// 2
+const store = (param) => {
+	return Follower.find(param);
+}
+
+// 3
+// can be abstracted if other routes share the same response schema
+const graph = (results) => {
+	return results.map((model) => {
+		// do something
+	})
+}
+
 ```
 
 ```javascript
@@ -89,7 +117,8 @@ Api.getFollowers = (req, res) => {
 	.then(RestHelper.success(req, res)) // a helper to return the json and the correct status code
 	.catch(RestHelper.error(req, res)); // a helper to return the error and the error description
 }
-module.exports = function follows() {
+// Curry this so that you can pass other dependency if you need to (socket, passport)
+module.exports = function follows(param) {
 	return Api;
 }
 ```
@@ -111,6 +140,8 @@ routes.map((route) => {
   // you will now need to iterate through each routes and connect then to the app
   apis.map((api) => {
     app[api.method](api.route, api.dispatch);
+    // with this, you don't need to call app.get(...)/app.post(...) all the time
+    // the calls are made into configurable properties that can be passed in
   });
   
 });
