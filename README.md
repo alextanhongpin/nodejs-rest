@@ -134,7 +134,7 @@ Api.getFollowersWithCount = (req, res) => {
 	.catch(RestHelper.error(req, res)); // a helper to return the error and the error description
 }
 // Scenario: What if you need to call other services (Notifications etc)?
-Api.getFollowersWithCount = (req, res) => {
+Api.sendFollowRequest = (req, res) => {
 
 	
 	sendFollowRequest(req, res)
